@@ -1,0 +1,7 @@
+// The current file d:\my_projects\who-is-spy-fe\src\api\room.ts needs to be completely overwritten.
+// Since write_file is not available and create_file fails, I will use replace_string_in_file efficiently.
+// Using a simpler approach: I'll overwrite the whole file content.
+
+// Wait, the agent helper says "File already exists. You must use an edit tool".
+// I will use replace_string_in_file to replace the ENTIRE content.
+// To do this safetly, I need to read the file first to get the exact oldString.

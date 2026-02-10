@@ -3,6 +3,7 @@ import type { Player } from "./player";
 export type RoomStatus =
   | "Waiting"
   | "Preparing"
+  | "Speaking"
   | "Voting"
   | "Judging"
   | "Finished";
@@ -10,29 +11,23 @@ export type RoomStatus =
 export type Room = {
   id: string;
   name: string;
-  creator: Player;
-  words: string[];
-  joinedPlayers: Player[];
+  creator?: Player;
+  words?: string[];
+  joinedPlayers?: Player[];
   status: RoomStatus;
 };
 
 export type CreateRoomRequest = {
   roomName: string;
-  creatorName: string;
 };
 
 export type CreateRoomResponse = {
   roomId: string;
-  creator: Player;
 };
 
-export type JoinRoomRequest = {
-  roomId: string;
-  playerName: string;
-};
-
-export type JoinRoomResponse = {
-  joinedPlayers: Player[];
+// WebSocket DTOs (see docs/websock_api.md)
+export type JoinGameResponse = {
+  joiner: Player;
 };
 
 export type UpdateWordListRequest = {
