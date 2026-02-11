@@ -1,6 +1,21 @@
 import { useState } from "react";
 import { Form, useActionData, useNavigation } from "react-router";
 
+/**
+ * JoinPage - 玩家加入或创建房间的入口页面
+ *
+ * 流程说明：
+ * 1. 创建房间模式 (mode="create")：
+ *    - 用户输入房间名称和昵称
+ *    - 提交表单 -> router.joinAction
+ *    - HTTP POST /rooms/create 创建房间获取 roomId
+ *    - 重定向到 GamePage，自动通过 WebSocket 加入房间
+ *
+ * 2. 加入房间模式 (mode="join")：
+ *    - 用户输入房间ID和昵称
+ *    - 提交表单 -> router.joinAction
+ *    - 重定向到 GamePage，通过 WebSocket 加入房间
+ */
 export default function JoinPage() {
   const [mode, setMode] = useState<"join" | "create">("join");
   const navigation = useNavigation();
@@ -10,6 +25,7 @@ export default function JoinPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-900/5">
+        {/* 模式切换按钮：创建房间 vs 加入房间 */}
         <div className="flex text-center font-medium">
           <button
             type="button"
@@ -37,6 +53,7 @@ export default function JoinPage() {
 
         <div className="p-8">
           <Form method="post" className="space-y-5">
+            {/* mode 隐藏字段决定后端流程：create 会先调用 HTTP 创建房间，join 直接跳转 */}
             <input type="hidden" name="mode" value={mode} />
 
             <div className="space-y-1">

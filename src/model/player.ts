@@ -16,5 +16,12 @@ export type Player = {
 };
 
 export function roleToString(r: Role): string {
-  return r;
+  const roleMap: Record<Role, string> = {
+    Admin: "管理员",
+    Normal: "平民",
+    Blank: "白板",
+    Spy: "卧底",
+    Observer: "旁观",
+  };
+  return roleMap[r] || r;
 }

@@ -8,6 +8,17 @@ import type { Player, Role } from "../model/player";
 
 // ==================== HTTP ====================
 
+/**
+ * 创建房间的第一步：调用 HTTP POST /rooms/create 接口
+ * 作用：在服务端创建一个新房间，并返回该房间的唯一 room_id
+ *
+ * 注意：此接口仅创建房间，不会将玩家加入房间！
+ * 创建后需要通过 WebSocket 发送 JoinGame 请求才能加入房间（见 RoomStreamClient.connectAndJoin）
+ *
+ * 完整的创建房间流程：
+ * 1. 调用此 createRoom() 函数（HTTP）获取 roomId
+ * 2. 调用 RoomStreamClient.connectAndJoin()（WebSocket）加入房间
+ */
 export async function createRoom(
   request: Pick<CreateRoomRequest, "roomName">,
 ): Promise<CreateRoomResponse> {
@@ -47,8 +58,16 @@ type WireResponse = {
 // High-level events the rest of the app consumes
 export type RoomEvent =
   | { type: "error"; message: string }
-  | { type: "self_joined"; player: Player }
-  | { type: "player_joined"; player: Player }
+  | {
+      type: "joined";
+      isSelf: boolean;
+      roomId: string;
+      stage: RoomStatus;
+      joiner: Player;
+      players: Player[];
+      masterId: string;
+    }
+  | { type: "player_left"; playerId: string; playerName: string }
   | { type: "words_set"; wordList: string[] }
   | { type: "started"; role: Role; word: string }
   | {
@@ -94,13 +113,38 @@ export class RoomStreamClient {
   private selfName: string | null = null;
   private selfId: string | null = null;
 
+  /**
+   * 通过 WebSocket 连接并加入房间
+   *
+   * 用途：
+   * 1. 创建房间后的第二步：使用 HTTP createRoom() 获得的 roomId 加入房间
+   * 2. 直接加入已有房间：使用已知的 roomId 加入房间
+   *
+   * 流程：
+   * - 建立 WebSocket 连接到 /api/v1/ws/join
+   * - 连接成功后立即发送 JoinGame 请求
+   * - 首个加入者成为管理员（Admin），后续加入者为普通玩家或观察者
+   */
   connectAndJoin(roomId: string, joinerName: string): Promise<Player> {
     return new Promise((resolve, reject) => {
       const url = `${WS_BASE_URL}/join`;
       this.ws = new WebSocket(url);
       this.selfName = joinerName;
+      let settled = false;
+      const guard = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error("JoinGame timeout"));
+          this.ws?.close();
+        }
+      }, 5000);
+
+      const cleanup = () => {
+        clearTimeout(guard);
+      };
 
       const onOpen = () => {
+        // 发送 JoinGame 请求加入房间（创建房间的第二步，或直接加入的唯一步骤）
         this.send("JoinGame", { room_id: roomId, joiner_name: joinerName });
       };
 
@@ -110,8 +154,10 @@ export class RoomStreamClient {
           const mapped = this.fromWire(raw);
           if (!mapped) return;
           // Resolve on first self join
-          if (mapped.type === "self_joined") {
-            resolve(mapped.player);
+          if (mapped.type === "joined" && mapped.isSelf && !settled) {
+            settled = true;
+            cleanup();
+            resolve(mapped.joiner);
           }
           this.listeners.forEach((l) => l(mapped));
         } catch (error) {
@@ -120,11 +166,19 @@ export class RoomStreamClient {
       };
 
       const onError = (error: Event) => {
-        reject(error);
+        if (!settled) {
+          settled = true;
+          cleanup();
+          reject(error);
+        }
       };
 
       const onClose = () => {
-        // noop for now; could add reconnect logic later
+        if (!settled) {
+          settled = true;
+          cleanup();
+          reject(new Error("Connection closed before JoinGame"));
+        }
       };
 
       this.ws.onopen = onOpen;
@@ -149,9 +203,23 @@ export class RoomStreamClient {
       if (isSelf && !this.selfId) {
         this.selfId = joiner.id;
       }
-      return isSelf
-        ? { type: "self_joined", player: joiner }
-        : { type: "player_joined", player: joiner };
+      return {
+        type: "joined",
+        isSelf,
+        roomId: String(raw.data.room_id || ""),
+        stage: raw.data.stage as RoomStatus,
+        joiner,
+        players: (raw.data.players as Player[]) || [],
+        masterId: String(raw.data.master_id || ""),
+      };
+    }
+
+    if (type === "ExitGame" && raw.data) {
+      return {
+        type: "player_left",
+        playerId: String(raw.data.left_player_id || ""),
+        playerName: String(raw.data.left_player_name || ""),
+      };
     }
 
     if (type === "SetWords" && raw.data) {

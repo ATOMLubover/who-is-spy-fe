@@ -18,20 +18,25 @@ async function joinAction({ request }: { request: Request }) {
     let roomId = "";
 
     if (mode === "create") {
+      // ============ 创建房间流程（两步）============
+      // 步骤1: 调用 HTTP POST /rooms/create 接口创建房间，获取 roomId
       const roomName =
         String(form.get("roomName") || "").trim() || "未命名房间";
-      // Create room via HTTP to get the ID, but don't join via HTTP
       const res = await createRoom({ roomName });
       roomId = res.roomId;
+      // 步骤2: 跳转到 GamePage，在那里通过 WebSocket 发送 JoinGame 加入房间
+      // （见 GamePage -> gameStore.connect -> RoomStreamClient.connectAndJoin）
     } else {
+      // ============ 直接加入房间流程（一步）============
+      // 直接使用用户输入的 roomId，然后跳转到 GamePage 通过 WebSocket 加入
       roomId = String(form.get("roomId") || "").trim();
       if (!roomId) {
         return { error: "请输入房间号" };
       }
     }
 
-    // Redirect to GamePage with playerName.
-    // The Game Page logic will handle the actual WebSocket join/connection.
+    // 重定向到 GamePage，携带 roomId 和 playerName
+    // GamePage 会自动调用 WebSocket 连接并发送 JoinGame 请求
     return redirect(
       `/room/${roomId}?playerName=${encodeURIComponent(playerName)}`,
     );

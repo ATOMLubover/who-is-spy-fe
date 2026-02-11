@@ -35,6 +35,29 @@
 
 - 首条消息必须是 `JoinGame` 才会加入房间并获得后续 req 通道。
 
+响应（服务端 → 客户端）：`JoinGame` 的行为稍有区分：
+
+- 正常加入（新玩家）时，服务端会广播一条 `JoinGame` 给房间内所有连接，`data` 包含公开的房间快照：
+
+```json
+{
+  "response_type": "JoinGame",
+  "data": {
+    "room_id": "string",
+    "stage": "Waiting|Preparing|Speaking|Voting|Judging|Finished",
+    "joiner": { "id": "string", "name": "string", "role": "...", "word": "" },
+    "players": [ { "id": "string", "name": "string", "role": "...", "word": "" }, ... ],
+    "master_id": "string"
+  }
+}
+```
+
+- 断线重连（检测到同名玩家）时，服务器会先**单发（私发）**给重连者一条包含其完整信息的 `JoinGame`（`joiner.word` 与 `joiner.role` 为完整值），随后再**广播（公开）**一条 `JoinGame` 给房间内所有人，其中 `joiner` 与 `players` 列表均为公开视图（`word` 字段被清空以防泄露）。
+
+- 公开视图的 `players` 用于前端重建玩家列表与当前阶段，不含任何玩家的秘密词（`word` 均为空）。
+
+- `master_id` 表示房主/管理员的 player id，用于前端显示/权限控制。
+
 2. `SetWords`
 
 ```json
@@ -95,6 +118,8 @@
 }
 ```
 
+。
+
 **响应类型与数据**
 
 1. `Error`
@@ -113,17 +138,30 @@
 {
   "response_type": "JoinGame",
   "data": {
+    "room_id": "string",
+    "stage": "Waiting|Preparing|Speaking|Voting|Judging|Finished",
     "joiner": {
       "id": "string",
       "name": "string",
       "role": "Admin|Unset|Normal|Blank|Spy|Observer",
-      "word": "string (可能为空)"
-    }
+      "word": "string"
+    },
+    "players": [
+      {
+        "id": "string",
+        "name": "string",
+        "role": "Admin|Unset|Normal|Blank|Spy|Observer",
+        "word": "string"
+      }
+    ],
+    "master_id": "string"
   }
 }
 ```
 
-- 加入成功/新玩家广播都会收到。
+- 说明：服务端根据场景会发送两种 `JoinGame`：
+  - **私发（仅发给重连者）**：`data.joiner.word` 与 `data.joiner.role` 为完整值，用于恢复该玩家的私有信息；`data.players` 为公开列表（`word` 字段为空）。
+  - **广播（发给所有人）**：`data.joiner` 与 `data.players` 均为公开视图，所有玩家的 `word` 字段均为空以防泄露。
 
 3. `SetWords`
 
@@ -138,6 +176,23 @@
 
 - 只有管理员设置后广播。
 
+**ExitGame**
+
+```json
+{
+  "response_type": "ExitGame",
+  "data": {
+    "left_player_id": "string",
+    "left_player_name": "string"
+  }
+}
+```
+
+- 行为说明：服务端会在玩家退出时发送 `ExitGame` 响应给相关连接：
+  - 向退出的连接单播一条 `ExitGame` 作为退出确认；
+  - 同时向房间内其他连接广播一条 `ExitGame` 通知，通知中字段与单播一致（`left_player_id` / `left_player_name`）。
+  - 文档中不暴露任何关于服务端内部触发退出请求的细节；客户端只需处理收到的 `ExitGame` 响应即可。
+
 4. `StartGame`
 
 ```json
@@ -150,7 +205,7 @@
 }
 ```
 
-- 单播给非管理员/非观察者玩家，用于展示身份。
+- 广播给所有人，如果不是参与游戏的这三个角色，则 role 和 word 都留空。
 
 5. `Describe`
 
