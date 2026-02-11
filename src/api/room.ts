@@ -69,7 +69,7 @@ export type RoomEvent =
     }
   | { type: "player_left"; playerId: string; playerName: string }
   | { type: "words_set"; wordList: string[] }
-  | { type: "started"; role: Role; word: string }
+  | { type: "started"; role: Role; word: string; players?: Player[] }
   | {
       type: "describe";
       speakerId: string;
@@ -234,6 +234,7 @@ export class RoomStreamClient {
         type: "started",
         role: raw.data.assigned_role as Role,
         word: (raw.data.assigned_word as string) || "",
+        players: (raw.data.players as Player[]) || undefined,
       };
     }
 

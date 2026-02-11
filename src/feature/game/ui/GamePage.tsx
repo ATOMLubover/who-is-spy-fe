@@ -4,6 +4,7 @@ import { useGameStore } from "../store/gameStore";
 import PlayerList from "../component/PlayerList";
 import GameChat from "../component/GameChat";
 import AdminControl from "../component/AdminControl";
+import ResultPage from "./ResultPage";
 import type { GameLog } from "../store/gameStore";
 import type { RoomStatus } from "../../../model/room";
 import { roleToString } from "../../../model/player";
@@ -88,6 +89,11 @@ export default function GamePage() {
     Playing: "游戏中",
     Finished: "已结束",
   };
+
+  // 如果游戏已结束，显示结算页面
+  if (roomStatus === "Finished") {
+    return <ResultPage />;
+  }
 
   return (
     <div className="h-screen w-screen bg-[#f3f4f6] text-slate-700 font-sans p-6 overflow-hidden flex gap-6 items-stretch">

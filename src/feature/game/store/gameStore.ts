@@ -54,6 +54,14 @@ interface GameState {
   players: Player[];
   messages: GameLog[];
   wordList: string[];
+  eliminatedIds: string[];
+  gameResult: {
+    winner: string;
+    answerWord: string;
+    spyWord: string;
+    playerRoles: Record<string, string>;
+    playerWords: Record<string, string>;
+  } | null;
 
   // Actions
   connect: (roomId: string, playerName: string) => Promise<void>;
@@ -90,6 +98,8 @@ export const useGameStore = create<GameState>()(
       players: [],
       messages: [],
       wordList: [],
+      eliminatedIds: [],
+      gameResult: null,
 
       connect: async (roomId, playerName) => {
         set({
@@ -219,6 +229,7 @@ export const useGameStore = create<GameState>()(
                 roomStatus: "Preparing",
                 hasVoted: false,
                 myVotedFor: null,
+                players: event.players || players,
                 messages: [
                   ...messages,
                   {
@@ -292,17 +303,32 @@ export const useGameStore = create<GameState>()(
               break;
 
             case "eliminate":
-              set({
-                messages: [
-                  ...messages,
-                  {
-                    id: logId,
-                    timestamp: now,
-                    type: "result",
-                    eliminatedPlayerId: event.eliminatedId,
-                  },
-                ],
-              });
+              {
+                const eliminatedId = event.eliminatedId;
+                const updatedPlayers = players.map((p) =>
+                  p.id === eliminatedId
+                    ? { ...p, role: "Observer" as Role }
+                    : p,
+                );
+                const currentEliminatedIds = get().eliminatedIds;
+                set({
+                  players: updatedPlayers,
+                  myRole:
+                    get().playerId && get().playerId === eliminatedId
+                      ? "Observer"
+                      : get().myRole,
+                  eliminatedIds: [...currentEliminatedIds, eliminatedId],
+                  messages: [
+                    ...messages,
+                    {
+                      id: logId,
+                      timestamp: now,
+                      type: "result",
+                      eliminatedPlayerId: eliminatedId,
+                    },
+                  ],
+                });
+              }
               break;
 
             case "result":
@@ -310,6 +336,13 @@ export const useGameStore = create<GameState>()(
                 roomStatus: "Finished",
                 hasVoted: false,
                 myVotedFor: null,
+                gameResult: {
+                  winner: event.winner,
+                  answerWord: event.answerWord,
+                  spyWord: event.spyWord,
+                  playerRoles: event.playerRoles,
+                  playerWords: event.playerWords,
+                },
                 messages: [
                   ...messages,
                   {

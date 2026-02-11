@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useGameStore } from "../store/gameStore";
 import type { RoomStatus } from "../../../model/room";
-import { Check, Play, Settings2, Plus, X } from "lucide-react";
-
-const areWordListsEqual = (a: string[], b: string[]) =>
-  a.length === b.length && a.every((w, i) => w === b[i]);
+import { Check, Play, Settings2 } from "lucide-react";
 
 export default function AdminControl() {
   const {
@@ -24,32 +21,17 @@ export default function AdminControl() {
   };
 
   const roomStatus = getLatestRoomStatus();
-  const [draftWords, setDraftWords] = useState<string[]>(serverWords);
-  const [tempWord, setTempWord] = useState("");
+  const [normalWord, setNormalWord] = useState("");
+  const [spyWord, setSpyWord] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingWords, setPendingWords] = useState<string[] | null>(null);
   const [justSynced, setJustSynced] = useState(false);
-  const [submitGuard, setSubmitGuard] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
 
   useEffect(() => {
-    setDraftWords(serverWords);
-  }, [serverWords]);
-
-  useEffect(() => {
-    if (!pendingWords) return;
-    if (areWordListsEqual(serverWords, pendingWords)) {
-      setIsSubmitting(false);
-      setPendingWords(null);
-      setJustSynced(true);
-      setDraftWords(serverWords);
-      if (submitGuard) {
-        clearTimeout(submitGuard);
-        setSubmitGuard(null);
-      }
+    if (serverWords.length >= 2) {
+      setNormalWord(serverWords[0] || "");
+      setSpyWord(serverWords[1] || "");
     }
-  }, [pendingWords, serverWords, submitGuard]);
+  }, [serverWords]);
 
   useEffect(() => {
     if (!justSynced) return;
@@ -57,17 +39,11 @@ export default function AdminControl() {
     return () => clearTimeout(timer);
   }, [justSynced]);
 
-  useEffect(
-    () => () => {
-      if (submitGuard) clearTimeout(submitGuard);
-    },
-    [submitGuard],
-  );
-
-  const isDirty = useMemo(
-    () => !areWordListsEqual(draftWords, serverWords),
-    [draftWords, serverWords],
-  );
+  const isDirty = useMemo(() => {
+    if (serverWords.length !== 2)
+      return normalWord.trim() !== "" || spyWord.trim() !== "";
+    return normalWord !== serverWords[0] || spyWord !== serverWords[1];
+  }, [normalWord, spyWord, serverWords]);
 
   const playableCount = useMemo(
     () =>
@@ -75,36 +51,19 @@ export default function AdminControl() {
     [players],
   );
 
-  const handleAddWord = () => {
-    if (tempWord.trim()) {
-      setDraftWords([...draftWords, tempWord.trim()]);
-      setTempWord("");
-    }
-  };
-
-  const handleRemoveWord = (index: number) => {
-    setDraftWords(draftWords.filter((_, i) => i !== index));
-  };
-
   const handleSubmitWords = async () => {
     if (!isDirty) return;
-    const normalizedDraft = draftWords.map((w) => w.trim()).filter(Boolean);
-    setIsSubmitting(true);
-    setPendingWords(normalizedDraft);
-    setJustSynced(false);
-    if (submitGuard) {
-      clearTimeout(submitGuard);
-      setSubmitGuard(null);
+    const trimmedNormal = normalWord.trim();
+    const trimmedSpy = spyWord.trim();
+    if (!trimmedNormal || !trimmedSpy) {
+      return;
     }
-    const guard = setTimeout(() => {
-      setIsSubmitting(false);
-      setPendingWords(null);
-    }, 5000);
-    setSubmitGuard(guard);
+    setIsSubmitting(true);
     try {
-      await updateWordList(normalizedDraft);
+      await updateWordList([trimmedNormal, trimmedSpy]);
+      setJustSynced(true);
     } finally {
-      // 交由 WebSocket 返回的 words_set 事件来关闭提交态
+      setIsSubmitting(false);
     }
   };
 
@@ -121,7 +80,7 @@ export default function AdminControl() {
           <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-xs font-semibold text-slate-500 tracking-wide">
-                词库配置
+                词语配置
               </label>
               <span
                 className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border ${
@@ -134,53 +93,44 @@ export default function AdminControl() {
               </span>
             </div>
 
-            {/* <p className="text-[11px] text-slate-400 mb-2">
-              服务器词库 {serverWords.length} 条，草稿 {draftWords.length} 条
-            </p> */}
-
             <div className="space-y-3">
-              <div className="flex gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                  平民词
+                </label>
                 <input
                   type="text"
-                  value={tempWord}
-                  onChange={(e) => setTempWord(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddWord()}
-                  className="flex-1 bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all placeholder:text-slate-400"
-                  placeholder="输入词语..."
+                  value={normalWord}
+                  onChange={(e) => setNormalWord(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all placeholder:text-slate-400"
+                  placeholder="输入平民词..."
                 />
-                <button
-                  onClick={handleAddWord}
-                  className="bg-white border border-emerald-100 text-emerald-700 hover:bg-emerald-50 p-2 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-100"
-                >
-                  <Plus size={18} />
-                </button>
               </div>
 
-              {draftWords.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100 min-h-15">
-                  {draftWords.map((w, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 text-xs bg-white text-indigo-500 font-medium px-2 py-1 rounded-md border border-indigo-100 shadow-sm animate-fade-in"
-                    >
-                      {w}
-                      <button
-                        onClick={() => handleRemoveWord(i)}
-                        className="text-slate-400 hover:text-emerald-700 transition-colors focus:outline-none"
-                      >
-                        <X size={12} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                  卧底词
+                </label>
+                <input
+                  type="text"
+                  value={spyWord}
+                  onChange={(e) => setSpyWord(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 hover:border-rose-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-100 focus:border-rose-400 transition-all placeholder:text-slate-400"
+                  placeholder="输入卧底词..."
+                />
+              </div>
 
               <button
                 onClick={handleSubmitWords}
-                disabled={!isDirty || isSubmitting}
+                disabled={
+                  !isDirty ||
+                  isSubmitting ||
+                  !normalWord.trim() ||
+                  !spyWord.trim()
+                }
                 className="w-full text-xs bg-white border border-emerald-100 text-emerald-700 hover:bg-emerald-50 py-2 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "更新中..." : "确认更新词库"}
+                {isSubmitting ? "更新中..." : "确认更新词语"}
               </button>
 
               {justSynced && (
@@ -194,7 +144,7 @@ export default function AdminControl() {
           <div className="pt-2">
             <button
               onClick={() => startGame()}
-              disabled={playableCount !== 8 || serverWords.length < 3}
+              disabled={playableCount !== 8 || serverWords.length !== 2}
               className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg font-bold shadow-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play size={18} fill="currentColor" className="opacity-90" />

@@ -81,6 +81,11 @@ export default function PlayerList() {
                 <p className="text-xs text-slate-400 mt-0.5">
                   {getRoleName(p.role)}
                 </p>
+                {p.word && (
+                  <p className="text-xs text-rose-500 font-medium mt-1">
+                    词语: {p.word}
+                  </p>
+                )}
               </div>
             </div>
           );
