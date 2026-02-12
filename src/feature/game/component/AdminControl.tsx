@@ -135,7 +135,7 @@ export default function AdminControl() {
           <div className="pt-2">
             <button
               onClick={() => startGame()}
-              disabled={playableCount !== 8 || serverWords.length !== 2}
+              disabled={playableCount !== 8}
               className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg font-bold shadow-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play size={18} fill="currentColor" className="opacity-90" />

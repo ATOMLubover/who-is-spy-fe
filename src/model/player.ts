@@ -6,7 +6,7 @@ export const Role = {
   Observer: "Observer",
 } as const;
 
-export type Role = "Admin" | "Normal" | "Blank" | "Spy" | "Observer";
+export type Role = "Unset" | "Admin" | "Normal" | "Blank" | "Spy" | "Observer";
 
 export type Player = {
   id: string;
@@ -18,6 +18,7 @@ export type Player = {
 export function roleToString(r: Role): string {
   const roleMap: Record<Role, string> = {
     Admin: "管理员",
+    Unset: "暂未分配",
     Normal: "平民",
     Blank: "白板",
     Spy: "卧底",

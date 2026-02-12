@@ -4,7 +4,6 @@ import PlayerList from "../component/PlayerList";
 import GameChat from "../component/GameChat";
 import AdminControl from "../component/AdminControl";
 import ResultPage from "./ResultPage";
-import { roleToString } from "../../../model/player";
 
 /**
  * GamePage - 游戏主页面
@@ -63,12 +62,12 @@ function GameView({ roomId }: { roomId: string }) {
     );
   }
 
-  // 状态映射
+  /*   // 状态映射
   const statusMap: Record<string, string> = {
     Waiting: "等待中",
     Playing: "游戏中",
     Finished: "已结束",
-  };
+  }; */
 
   // 如果游戏已结束，显示结算页面
   if (roomStatus === "Finished") {
@@ -114,18 +113,18 @@ function GameView({ roomId }: { roomId: string }) {
             <h1 className="font-bold text-slate-700 text-lg tracking-tight">
               房间号 {roomId}
             </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            {/*             <p className="text-xs text-slate-400 mt-0.5">
               状态：
               <span className="text-indigo-500 font-medium">
                 {statusMap[roomStatus] || roomStatus}
               </span>
-            </p>
+            </p> */}
           </div>
 
           <div className="flex items-center gap-4">
             {(myWord || myRole) && (
               <>
-                <div className="text-right">
+                {/*                 <div className="text-right">
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">
                     你的身份
                   </p>
@@ -133,7 +132,7 @@ function GameView({ roomId }: { roomId: string }) {
                     {myRole ? roleToString(myRole) : "未知"}
                   </p>
                 </div>
-
+ */}
                 {myWord ? (
                   <div className="bg-indigo-50/80 text-indigo-600 px-5 py-2.5 rounded-xl border border-indigo-100 shadow-sm">
                     <p className="text-[10px] text-indigo-400 uppercase tracking-widest mb-1 text-center font-medium">

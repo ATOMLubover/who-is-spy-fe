@@ -23,22 +23,30 @@ export default function PlayerList() {
     }
   };
 
-  const getRoleName = (role: string) => {
-    switch (role) {
-      case "Admin":
-        return "管理员";
-      case "Spy":
-        return "卧底";
-      case "Observer":
-        return "观察者";
-      case "Blank":
-        return "白板";
-      case "Civilian":
-        return "平民";
-      default:
-        return "未知";
-    }
-  };
+  // const getRoleName = (role: string) => {
+  //   switch (role) {
+  //     case "Admin":
+  //       return "管理员";
+  //     case "Spy":
+  //       return "卧底";
+  //     case "Observer":
+  //       return "观察者";
+  //     case "Blank":
+  //       return "白板";
+  //     case "Civilian":
+  //       return "平民";
+  //     default:
+  //       return "未知";
+  //   }
+  // };
+
+  const sortedPlayers = players.slice().sort((a, b) => {
+    const isA = a.id === playerId;
+    const isB = b.id === playerId;
+    if (isA && !isB) return -1;
+    if (!isA && isB) return 1;
+    return a.name.localeCompare(b.name, "zh-Hans");
+  });
 
   return (
     <div className="h-full flex flex-col">
@@ -51,8 +59,9 @@ export default function PlayerList() {
       </h2>
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-        {players.map((p) => {
+        {sortedPlayers.map((p) => {
           const isMe = p.id === playerId;
+          const isObserver = p.role === "Observer";
           return (
             <div
               key={p.id}
@@ -61,6 +70,7 @@ export default function PlayerList() {
                 isMe
                   ? "bg-indigo-50/50 border-indigo-100 shadow-sm"
                   : "bg-white border-transparent hover:bg-gray-50 hover:border-gray-100",
+                isObserver && "opacity-60 grayscale",
               )}
             >
               <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 text-slate-400 shrink-0">
@@ -78,12 +88,12 @@ export default function PlayerList() {
                   )}
                 </div>
 
-                <p className="text-xs text-slate-400 mt-0.5">
+                {/* <p className="text-xs text-slate-400 mt-0.5">
                   {getRoleName(p.role)}
-                </p>
+                </p> */}
                 {p.word && (
-                  <p className="text-xs text-rose-500 font-medium mt-1">
-                    词语: {p.word}
+                  <p className="text-xs text-blue-400 font-medium mt-1">
+                    词语: {p.word || "-"}
                   </p>
                 )}
               </div>

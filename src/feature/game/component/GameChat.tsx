@@ -159,8 +159,9 @@ export default function GameChat() {
 
   const isVoting = roomStatus === "Voting";
   const isSpeaking = roomStatus === "Speaking";
-  // Filter out candidates: not me, not admin/observer usually (simplified logic here: existing players)
-  const canVote = isVoting && myRole !== "Admin" && myRole !== "Observer";
+  // 仅排除管理员/旁观，其余角色（Normal/Blank/Spy 等游戏玩家）可见投票
+  const canVote =
+    isVoting && myRole !== "Admin" && myRole !== "Observer" && !!myRole;
   const isMyTurn = isSpeaking && currentTurn.id === playerId;
   const canSpeak = isSpeaking && isMyTurn;
 
