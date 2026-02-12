@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useGameStore, type GameLog } from "../store/gameStore";
+import { useGame, type GameLog } from "../store/GameContext";
 import { SendHorizontal, Vote } from "lucide-react";
 import classNames from "classnames";
 
@@ -14,7 +14,7 @@ export default function GameChat() {
     roomStatus,
     hasVoted,
     myVotedFor,
-  } = useGameStore();
+  } = useGame();
 
   // 获取最新的current turn信息
   const getCurrentTurn = (): { id?: string; name?: string } => {

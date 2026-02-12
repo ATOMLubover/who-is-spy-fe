@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useGameStore } from "../store/gameStore";
+import { useGame } from "../store/GameContext";
 import type { RoomStatus } from "../../../model/room";
 import { Check, Play, Settings2 } from "lucide-react";
 
@@ -10,7 +10,7 @@ export default function AdminControl() {
     messages,
     wordList: serverWords,
     players,
-  } = useGameStore();
+  } = useGame();
 
   const getLatestRoomStatus = (): RoomStatus => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -82,15 +82,6 @@ export default function AdminControl() {
               <label className="block text-xs font-semibold text-slate-500 tracking-wide">
                 词语配置
               </label>
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border ${
-                  isDirty
-                    ? "bg-amber-50 border-amber-100 text-amber-700"
-                    : "bg-emerald-50 border-emerald-100 text-emerald-700"
-                }`}
-              >
-                {isDirty ? "有未提交更改" : "已与服务器同步"}
-              </span>
             </div>
 
             <div className="space-y-3">

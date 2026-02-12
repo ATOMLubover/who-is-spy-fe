@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { useGameStore } from "../store/gameStore";
+import { useGame } from "../store/GameContext";
 import { Trophy, Home, Users, XCircle, Target } from "lucide-react";
 
 /**
@@ -8,7 +8,7 @@ import { Trophy, Home, Users, XCircle, Target } from "lucide-react";
  */
 export default function ResultPage() {
   const navigate = useNavigate();
-  const { gameResult, players, eliminatedIds, disconnect } = useGameStore();
+  const { gameResult, players, eliminatedIds, disconnect } = useGame();
 
   if (!gameResult) {
     return (

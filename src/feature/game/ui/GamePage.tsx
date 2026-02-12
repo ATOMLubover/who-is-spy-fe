@@ -1,54 +1,20 @@
-import { useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
-import { useGameStore } from "../store/gameStore";
+import { GameProvider, useGame } from "../store/GameContext";
 import PlayerList from "../component/PlayerList";
 import GameChat from "../component/GameChat";
 import AdminControl from "../component/AdminControl";
 import ResultPage from "./ResultPage";
-import type { GameLog } from "../store/gameStore";
-import type { RoomStatus } from "../../../model/room";
 import { roleToString } from "../../../model/player";
 
 /**
  * GamePage - 游戏主页面
  */
 export default function GamePage() {
-  const { roomId: paramRoomId } = useParams();
+  const { roomId } = useParams();
   const [searchParams] = useSearchParams();
-  const paramPlayerName = searchParams.get("playerName");
+  const playerName = searchParams.get("playerName");
 
-  const {
-    connect,
-    disconnect,
-    myRole,
-    myWord,
-    connected,
-    messages,
-    joinStatus,
-    joinError,
-  } = useGameStore();
-
-  const getLatestRoomStatus = (): RoomStatus => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const m: GameLog = messages[i];
-      if (m.type === "status") return m.status;
-    }
-    return "Waiting";
-  };
-
-  const roomStatus = getLatestRoomStatus();
-  const isAdmin = myRole === "Admin";
-
-  useEffect(() => {
-    if (paramRoomId && paramPlayerName) {
-      connect(paramRoomId, paramPlayerName);
-    }
-    return () => {
-      disconnect();
-    };
-  }, [paramRoomId, paramPlayerName, connect, disconnect]);
-
-  if (!paramRoomId || !paramPlayerName) {
+  if (!roomId || !playerName) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#fdfbf7] text-gray-400">
         无效的房间号或玩家名
@@ -56,12 +22,26 @@ export default function GamePage() {
     );
   }
 
+  return (
+    <GameProvider roomId={roomId} playerName={playerName}>
+      <GameView roomId={roomId} />
+    </GameProvider>
+  );
+}
+
+// 内部视图：消费 useGame
+function GameView({ roomId }: { roomId: string }) {
+  const { myRole, myWord, connected, roomStatus, joinStatus, joinError } =
+    useGame();
+
+  const isAdmin = myRole === "Admin";
+
   if (joinStatus === "connecting") {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#fdfbf7] text-gray-500 gap-2">
         <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
         <p className="text-sm">正在加入房间...</p>
-        <p className="text-xs text-gray-400">房间号 {paramRoomId}</p>
+        <p className="text-xs text-gray-400">房间号 {roomId}</p>
       </div>
     );
   }
@@ -132,7 +112,7 @@ export default function GamePage() {
         <header className="px-6 py-4 flex justify-between items-center bg-white/50 border-b border-gray-100 backdrop-blur-md sticky top-0 z-10">
           <div>
             <h1 className="font-bold text-slate-700 text-lg tracking-tight">
-              房间号 {paramRoomId}
+              房间号 {roomId}
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               状态：

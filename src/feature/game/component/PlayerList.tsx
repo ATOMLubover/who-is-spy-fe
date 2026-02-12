@@ -1,9 +1,9 @@
-import { useGameStore } from "../store/gameStore";
+import { useGame } from "../store/GameContext";
 import { User, Shield, Glasses, UserX, Users } from "lucide-react";
 import classNames from "classnames";
 
 export default function PlayerList() {
-  const { players, playerId } = useGameStore();
+  const { players, playerId } = useGame();
 
   const getRoleIcon = (role: string) => {
     switch (role) {

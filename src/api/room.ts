@@ -103,7 +103,8 @@ export type RoomEvent =
       spyWord: string;
       playerRoles: Record<string, string>;
       playerWords: Record<string, string>;
-    };
+    }
+  | { type: "disconnected"; reason?: string };
 
 export type RoomStreamEventHandler = (event: RoomEvent) => void;
 
@@ -157,8 +158,27 @@ export class RoomStreamClient {
           if (mapped.type === "joined" && mapped.isSelf && !settled) {
             settled = true;
             cleanup();
+            // mark joined and replace close/error handlers so we can notify subscribers
             resolve(mapped.joiner);
+
+            // After join succeeds, ensure future close/error notify listeners
+            if (this.ws) {
+              this.ws.onclose = () => {
+                this.ws = null;
+                this.listeners.forEach((l) =>
+                  l({ type: "disconnected", reason: "WebSocket closed" }),
+                );
+              };
+
+              this.ws.onerror = () => {
+                this.ws = null;
+                this.listeners.forEach((l) =>
+                  l({ type: "disconnected", reason: "WebSocket error" }),
+                );
+              };
+            }
           }
+
           this.listeners.forEach((l) => l(mapped));
         } catch (error) {
           console.error("Failed to parse message:", error);
@@ -170,6 +190,12 @@ export class RoomStreamClient {
           settled = true;
           cleanup();
           reject(error);
+        } else {
+          // If error occurs after join is settled, notify subscribers
+          this.ws = null;
+          this.listeners.forEach((l) =>
+            l({ type: "disconnected", reason: "WebSocket error" }),
+          );
         }
       };
 
@@ -178,6 +204,12 @@ export class RoomStreamClient {
           settled = true;
           cleanup();
           reject(new Error("Connection closed before JoinGame"));
+        } else {
+          // If close happens after join is settled, notify subscribers
+          this.ws = null;
+          this.listeners.forEach((l) =>
+            l({ type: "disconnected", reason: "WebSocket closed" }),
+          );
         }
       };
 
